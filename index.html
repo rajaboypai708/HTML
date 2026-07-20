@@ -1336,14 +1336,7 @@ For multiple independent fixes, separate each OLD===SPLIT===NEW pair with ===BLO
     await ghLoadConfigFromFirebase();
     scRender(); // re-render shortcuts now that Firebase data may have arrived
 
-    const DEFAULT_REPO = '888znq/TNL';
-    if (!ghRepos.find(r => r.name === DEFAULT_REPO)) {
-      ghRepos.unshift({ name: DEFAULT_REPO, isDefault: true });
-    }
-    if (!ghRepos.find(r => r.isDefault)) {
-      const tnl = ghRepos.find(r => r.name === DEFAULT_REPO);
-      if (tnl) tnl.isDefault = true;
-    }
+   
     ghBuildDropdown();
 
     const defaultRepo = ghRepos.find(r => r.isDefault) || ghRepos[0];
