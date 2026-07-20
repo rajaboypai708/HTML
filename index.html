@@ -1,0 +1,1944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Compile - Web Edition (Manual)</title>
+
+<!-- ── PWA Configuration ── -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#000432">
+<meta name="background-color" content="#000432">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AI Compile">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png">
+<link rel="shortcut icon" href="icons/favicon.ico">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyACcNGFYA-q8WFLyjDifARJFU_8INYveU8",
+    authDomain: "raja-98d26.firebaseapp.com",
+    databaseURL: "https://raja-98d26-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "raja-98d26",
+    storageBucket: "raja-98d26.firebasestorage.app",
+    messagingSenderId: "748276211835",
+    appId: "1:748276211835:web:a64c6aa85659a767b342de"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  window._fbSaveConfig = async function(cfg) {
+    await set(ref(db, 'aicompiler/gh_config'), cfg);
+  };
+  window._fbLoadConfig = async function() {
+    const snap = await get(ref(db, 'aicompiler/gh_config'));
+    return snap.exists() ? snap.val() : null;
+  };
+  window._fbReady = true;
+</script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000432; font-family: 'JetBrains Mono', monospace; padding-bottom: 100px; }
+
+#preview {
+  position: fixed; inset: 0; bottom: 134px;
+  width: 100%; height: calc(100% - 134px);
+  border: none; background: #000432; z-index: 1;
+}
+#codeView {
+  position: fixed; inset: 0; bottom: 134px;
+  width: 100%; height: calc(100% - 134px);
+  border: none; background: #000432;
+  color: #ffffff; font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; padding: 20px; outline: none;
+  resize: none; z-index: 2; display: none;
+  white-space: pre; overflow: auto; line-height: 1.5;
+}
+#fring {
+  position: fixed; inset: 0; bottom: 100px; z-index: 99;
+  border: 3px solid #ffffff;
+  box-shadow: inset 0 0 60px rgba(255,255,255,.12);
+  pointer-events: none; opacity: 0; transition: opacity .5s;
+}
+#fring.on { opacity: 1; }
+
+/* ── Shortcut Bar ── */
+#shortcutBar {
+  position: fixed; bottom: 100px; left: 0; width: 100%; height: 34px;
+  background: #000432; border-top: 1px solid #ffffff;
+  z-index: 102; display: flex; align-items: center; justify-content: center;
+  padding: 0 8px; gap: 5px; overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none;
+}
+#shortcutBar::-webkit-scrollbar { display: none; }
+#shortcutBar .sc-btn {
+  background: #000432; border: 1px solid #ffffff;
+  color: #ffffff; padding: 4px 10px; border-radius: 6px;
+  font: 700 10px/1 'JetBrains Mono', monospace;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s; outline: none;
+}
+#shortcutBar .sc-btn:hover { background: #ffffff; color: #000432; border-color: #ffffff; }
+#shortcutBar .sc-btn.active { background: #ffffff; color: #000432; border-color: #ffffff; box-shadow: 0 0 8px #ffffff; }
+#shortcutBar .sc-add-btn {
+  background: #000432; border: 1px dashed #ffffff;
+  color: #ffffff; padding: 4px 8px; border-radius: 6px;
+  font: 700 11px/1 'JetBrains Mono', monospace;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s;
+}
+#shortcutBar .sc-add-btn:hover { border-color: #ffffff; color: #000432; background: #ffffff; }
+#shortcutBar .sc-label { color: #ffffff; font: 700 11px/1 'JetBrains Mono', monospace; padding: 0 4px; flex-shrink: 0; }
+#shortcutBar .sc-lock-btn {
+  background: #000432; border: 1px solid #ffffff;
+  color: #ffffff; padding: 3px 7px; border-radius: 6px;
+  font: 700 11px/1 'JetBrains Mono', monospace;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s;
+}
+#shortcutBar .sc-lock-btn:hover { border-color: #ffffff; color: #000432; background: #ffffff; }
+#shortcutBar .sc-lock-btn.locked { border-color: #ffffff; color: #000432; background: #ffffff; }
+#shortcutBar .sc-collapse-btn {
+  background: #000432; border: 1px solid #ffffff;
+  color: #ffffff; padding: 3px 7px; border-radius: 6px;
+  font: 700 11px/1 'JetBrains Mono', monospace;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s;
+}
+#shortcutBar .sc-collapse-btn:hover { border-color: #ffffff; color: #000432; background: #ffffff; }
+#shortcutBar .sc-collapse-btn.collapsed { border-color: #ffffff; color: #000432; background: #ffffff; }
+
+/* ── UI Collapsed State ── */
+body.ui-collapsed #repoBar,
+body.ui-collapsed #controlBar,
+body.ui-collapsed #statusBar { display: none !important; }
+body.ui-collapsed #shortcutBar { bottom: 0; height: 44px; border-top: 1px solid rgba(255,255,255,0.4); box-shadow: 0 -4px 20px rgba(255,255,255,0.08); }
+body.ui-collapsed #preview { bottom: 44px; height: calc(100% - 44px); }
+body.ui-collapsed #codeView { bottom: 44px; height: calc(100% - 44px); }
+body.ui-collapsed #fring { bottom: 44px; }
+body.ui-collapsed #ghConfigPanel { bottom: 50px; }
+body.ui-collapsed #toast { bottom: 52px; }
+
+/* ── Compact Layout (single bottom bar: repos | input | toggles | undo/redo/push) ──
+   Nothing below is deleted or rewritten — every original element, id, class,
+   listener and function stays exactly as it was. This block only hides the
+   pieces that aren't in the new layout and re-flows everything that remains
+   (#repoBar + #controlBar) into one merged row. Toggle off by removing
+   "compact-layout" from <body> to instantly get the original full UI back. */
+body.compact-layout #bridgeIndicator,
+body.compact-layout #statusBar,
+body.compact-layout #shortcutBar { display: none !important; }
+
+/* Hide the controls that aren't in the new row */
+body.compact-layout #aiSelector,
+body.compact-layout #promptBtn,
+body.compact-layout #astBtn,
+body.compact-layout #clipHistory,
+body.compact-layout #revertBtn,
+body.compact-layout #fileBtn,
+body.compact-layout #viewModeBtn,
+body.compact-layout #undoBtn,
+body.compact-layout #redoBtn,
+body.compact-layout #controlBar .ctrl-sep { display: none !important; }
+
+/* Repo bar: no longer its own fixed row — now flows inline on the left
+   edge of #controlBar (moved in the markup to be its first child).
+   Reserved at a firm 40% of the bar width. Tabs wrap and shrink to fit
+   so every repo stays visible (expanded) at once, no horizontal scroll,
+   and the layout adjusts itself automatically as repos are added. */
+body.compact-layout #repoBar {
+  position: static; height: 100%; width: 40%; max-width: 40%; flex: 0 0 40%;
+  display: flex; align-items: center; justify-content: flex-start;
+  flex-wrap: nowrap; overflow: hidden;
+  padding: 0 8px 0 0; margin-right: 4px; gap: 3px;
+  background: transparent; border-top: none; backdrop-filter: none;
+  border-right: 1px solid #ffffff;
+}
+body.compact-layout #repoBar .repo-bar-empty { font-size: 8px; padding: 0 4px; white-space: nowrap; }
+/* Single bottom bar: repos | input | toggles | undo/redo/push, full width */
+body.compact-layout #controlBar {
+  position: fixed; bottom: 0; left: 0; width: 100%; height: 34px;
+  z-index: 100; display: flex; align-items: center; flex-wrap: nowrap;
+  border-top: 1px solid #ffffff; border-bottom: none;
+  padding: 0 6px; gap: 4px;
+}
+/* Remaining 60% (after the repo bar's firm, protected 40%) lives entirely
+   inside #bottom-controls, since #aiInstruction is a child of it. #controls
+   (undo/redo) and #git-controls (push/new-repo) are small fixed-content
+   sibling groups outside #bottom-controls — they're left at natural width
+   and given flex-shrink so the row never overflows 100%, while
+   #bottom-controls grows to absorb whatever space remains after repoBar's
+   40% and their natural width (in practice that's ~60%, since their
+   natural content width is small relative to the full bar).
+
+   Inside #bottom-controls, #aiInstruction takes a grow-weight of 1 and
+   every other child (toggles + payload/patch buttons) shares a combined
+   grow-weight of 2 — a 1:2 ratio that lands the input at ≈20% of the full
+   bar and the buttons/toggles at ≈40%, matching #controls/#git-controls'
+   natural sizing being comparatively small. */
+body.compact-layout #bottom-controls {
+  flex: 1 1 auto; min-width: 0; display: flex; align-items: center;
+  gap: 4px; overflow: visible;
+}
+body.compact-layout #aiInstruction {
+  flex: 1 1 0; width: auto; min-width: 0;
+}
+body.compact-layout #bottom-controls > button.btn {
+  flex: 0 0 auto;
+}
+body.compact-layout #payloadToggles,
+body.compact-layout #aiSelector {
+  flex: 0 1 auto; min-width: 0;
+}
+body.compact-layout #controls,
+body.compact-layout #git-controls {
+  display: flex; align-items: center; gap: 4px;
+  flex: 0 1 auto; min-width: 0; justify-content: center;
+}
+
+/* All buttons/selects in the bar share one height for perfect alignment */
+body.compact-layout button.btn,
+body.compact-layout select.btn,
+body.compact-layout #ghSettingsBtn,
+body.compact-layout #pushBtn,
+body.compact-layout #ghNewRepoBtn,
+body.compact-layout #repoVisBtn {
+  height: 22px; width: auto; min-width: 22px; padding: 0 7px; font-size: 13px;
+  border-radius: 5px; display: inline-flex; align-items: center;
+  justify-content: center; line-height: 1; flex: 0 0 auto;
+}
+body.compact-layout select.btn { width: auto; min-width: 22px; padding: 0 7px; font-size: 11px; }
+body.compact-layout input.btn {
+  height: 22px; padding: 0 8px; font-size: 11px; border-radius: 5px; box-sizing: border-box;
+}
+body.compact-layout #payloadToggles {
+  height: 22px; padding: 0 8px; gap: 5px; border-radius: 5px;
+  box-sizing: border-box; display: inline-flex; align-items: center;
+}
+body.compact-layout #payloadToggles label { font-size: 10px; gap: 3px; }
+body.compact-layout #payloadToggles input[type="checkbox"] { width: 13px; height: 13px; }
+/* Repo tabs: white-bordered name pills (full name available via the title=
+   tooltip on hover/long-press, abbreviated visually via text overflow).
+   Each tab grows to fill the available 40% space evenly and shrinks
+   automatically as more repos are added — no edits needed when new repos
+   show up. */
+body.compact-layout #repoBar .repo-btn {
+  flex: 1 1 0; min-width: 0; max-width: none; height: 18px;
+  padding: 0 6px; border-radius: 4px; font-size: 8px; color: #ffffff;
+  background: #000432; border: 1px solid #ffffff;
+  position: relative;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+body.compact-layout #repoBar .repo-btn::after {
+  content: ''; position: absolute; top: 3px; right: 3px;
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #ffffff; box-shadow: 0 0 4px #ffffff; opacity: 0;
+}
+body.compact-layout #repoBar .repo-btn.active::after { opacity: 1; }
+
+body.compact-layout #repoBar .repo-btn.active {
+  background: #000432; color: #22c55e; border-color: #22c55e;
+  opacity: 1; box-shadow: 0 0 8px #22c55e;
+}
+
+/* Re-flow the viewer to sit above the single merged bar */
+body.compact-layout #preview,
+body.compact-layout #codeView { bottom: 34px; height: calc(100% - 34px); }
+body.compact-layout #fring { bottom: 34px; }
+body.compact-layout #ghConfigPanel { bottom: 40px; }
+body.compact-layout #toast { bottom: 42px; }
+
+
+/* ── Repo Bar ── */
+#repoBar {
+  position: fixed; bottom: 66px; left: 0; width: 100%; height: 34px;
+  background: #000432; border-top: 1px solid #ffffff;
+  z-index: 101; display: flex; align-items: center;
+  padding: 0 8px; gap: 5px; overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none;
+}
+#repoBar::-webkit-scrollbar { display: none; }
+#repoBar .repo-btn {
+  background: #000432; border: 1px solid #ffffff;
+  color: #ffffff; padding: 4px 10px; border-radius: 6px;
+  font: 700 10px/1 'JetBrains Mono', monospace;
+  cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: all 0.15s; outline: none;
+}
+
+/* ── 8-colour cycling palette for normal (text) repo tabs ── */
+#repoBar .repo-btn:nth-child(8n+1) { border-color: #7eb8f7; color: #7eb8f7; }
+#repoBar .repo-btn:nth-child(8n+2) { border-color: #7df5c0; color: #7df5c0; }
+#repoBar .repo-btn:nth-child(8n+3) { border-color: #f9a875; color: #f9a875; }
+#repoBar .repo-btn:nth-child(8n+4) { border-color: #d47bff; color: #d47bff; }
+#repoBar .repo-btn:nth-child(8n+5) { border-color: #ff7b9c; color: #ff7b9c; }
+#repoBar .repo-btn:nth-child(8n+6) { border-color: #ffe066; color: #ffe066; }
+#repoBar .repo-btn:nth-child(8n+7) { border-color: #6ef0f0; color: #6ef0f0; }
+#repoBar .repo-btn:nth-child(8n+0) { border-color: #b5e88a; color: #b5e88a; }
+
+#repoBar .repo-btn:hover        { background: #ffffff; color: #000432; border-color: #ffffff; }
+#repoBar .repo-btn.active       { background: currentColor; color: #000432; border-color: currentColor; box-shadow: 0 0 10px currentColor; filter: brightness(1.15); }
+#repoBar .repo-btn.active:nth-child(8n+1) { background: #7eb8f7; color: #000432; }
+#repoBar .repo-btn.active:nth-child(8n+2) { background: #7df5c0; color: #000432; }
+#repoBar .repo-btn.active:nth-child(8n+3) { background: #f9a875; color: #000432; }
+#repoBar .repo-btn.active:nth-child(8n+4) { background: #d47bff; color: #000432; }
+#repoBar .repo-btn.active:nth-child(8n+5) { background: #ff7b9c; color: #000432; }
+#repoBar .repo-btn.active:nth-child(8n+6) { background: #ffe066; color: #000432; }
+#repoBar .repo-btn.active:nth-child(8n+7) { background: #6ef0f0; color: #000432; }
+#repoBar .repo-btn.active:nth-child(8n+0) { background: #b5e88a; color: #000432; }
+
+#repoBar .repo-bar-empty { color: #ffffff; font: 700 10px/1 'JetBrains Mono', monospace; padding: 0 8px; }
+
+/* ── Status Bar ── */
+#statusBar {
+  position: fixed; bottom: 0; left: 0; width: 100%; height: 22px;
+  background: rgba(0,0,0,0.9); border-top: 1px solid #ffffff; z-index: 999;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 15px; font-size: 11px; color: #ffffff; letter-spacing: 0.5px;
+}
+.status-item { opacity: 1; }
+
+/* ── Control Bar ── */
+#controls { display: flex; gap: 6px; flex-wrap: nowrap; align-items: center; }
+#bottom-controls { display: flex; gap: 6px; align-items: center; }
+#git-controls { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+#controlBar {
+  position: fixed; bottom: 22px; left: 0; width: 100%; height: 44px;
+  background: #000432; border-top: 1px solid #ffffff;
+  z-index: 100; display: flex; align-items: center;
+  padding: 0 10px; gap: 6px; overflow-x: auto; overflow-y: hidden;
+  scrollbar-width: none;
+  border-bottom: none;
+}
+#controlBar::-webkit-scrollbar { display: none; }
+#controlBar .ctrl-sep { width: 1px; height: 22px; background: #ffffff; flex-shrink: 0; margin: 0 4px; opacity: 0.3; }
+
+/* ── Payload Include Toggles ── */
+#payloadToggles {
+  display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+  background: #000432; border: 1px solid #ffffff;
+  border-radius: 8px; padding: 6px 10px;
+}
+#payloadToggles label {
+  display: flex; align-items: center; gap: 4px; cursor: pointer;
+  font: 700 10px/1 'JetBrains Mono', monospace; color: #ffffff;
+  white-space: nowrap; user-select: none;
+}
+#payloadToggles input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none;
+  width: 16px; height: 16px; cursor: pointer; margin: 0;
+  border: 1.5px solid #ffffff; border-radius: 4px;
+  background: #000432; position: relative; flex-shrink: 0;
+  transition: all 0.15s;
+}
+#payloadToggles input[type="checkbox"]:checked {
+  background: #000432; border-color: #ffffff;
+}
+#payloadToggles input[type="checkbox"]:checked::after {
+  content: ''; position: absolute; left: 4px; top: 0px;
+  width: 5px; height: 9px;
+  border: solid #ffffff; border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+#payloadToggles label:has(input:not(:checked)) { color: #ffffff; opacity: 1; }
+
+/* ── Uniform icon size across all bar buttons ── */
+button.btn, #pushBtn, #ghSettingsBtn, #ghNewRepoBtn {
+  font-size: 14px;
+}
+button.btn, select.btn, input.btn {
+  background: #000432; border: 1px solid #ffffff;
+  color: #ffffff; padding: 0; height: 26px; border-radius: 6px;
+  font: 700 11px/1 'JetBrains Mono', monospace;
+  cursor: pointer; outline: none;
+  transition: all 0.15s ease;
+  white-space: nowrap; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+button.btn { min-width: 26px; padding: 0 8px; }
+input.btn { cursor: text; width: 220px; padding: 0 10px; font-size: 11px; background: #000432; }
+input.btn::placeholder { color: #ffffff; opacity: 0.55; }
+select.btn { padding: 0 8px; }
+button.btn:hover, select.btn:hover { background: #ffffff; color: #000432; border-color: #ffffff; }
+input.btn:focus { background: #000432; color: #ffffff; border-color: #ffffff; outline: none; }
+input.btn:focus::placeholder { opacity: 0.35; }
+button.btn:active { transform: scale(0.96); }
+button.btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+
+/* ── Toast ── */
+#toast {
+  position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%);
+  padding: 8px 20px; border-radius: 20px; font: 700 11px/1 'JetBrains Mono', monospace;
+  letter-spacing: .5px; background: #000432;
+  border: 1px solid #ffffff; color: #ffffff;
+  z-index: 100; pointer-events: none;
+  opacity: 0; transition: opacity .25s, transform .25s;
+}
+#toast.show { opacity: 1; transform: translate(-50%, -5px); }
+
+/* ── AST Panel ── */
+#astPanel {
+  position: fixed; top: 70px; left: 20px; z-index: 98;
+  background: rgba(0,0,0,0.88); border: 1px solid #ffffff; border-radius: 8px;
+  padding: 14px; color: #fff; font-size: 10px; font-family: 'JetBrains Mono', monospace;
+  backdrop-filter: blur(10px); width: 280px; max-height: 75vh; overflow-y: auto;
+  display: none; line-height: 1.7;
+}
+#astPanel h4 { color: #ffffff; margin-bottom: 8px; font-size: 11px; }
+.ast-ok   { color: #ffffff; }
+.ast-err  { color: #ffffff; font-weight: 700; }
+.ast-warn { color: #ffffff; }
+
+/* ── Error Overlay ── */
+#errOverlay {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,4,50,0.97); border: 1px solid #ffffff; border-radius: 10px;
+  padding: 14px 16px 12px; color: #fff; font: 700 11px/1.6 'JetBrains Mono', monospace;
+  z-index: 200; min-width: 340px; max-width: 600px; display: none; white-space: pre-wrap;
+  backdrop-filter: blur(12px); box-shadow: 0 0 30px rgba(255,255,255,0.25);
+}
+#errOverlay .err-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+#errOverlay .err-title { color: #ffffff; font-size: 12px; letter-spacing: 0.5px; }
+#errOverlay .err-body { color: #ffffff; font-weight: 400; font-size: 11px; line-height: 1.6; max-height: 160px; overflow-y: auto; margin-bottom: 10px; word-break: break-word; }
+#errOverlay .err-actions { display: flex; gap: 8px; justify-content: flex-end; }
+#errOverlay .err-btn { background: rgba(255,255,255,0.15); border: 1px solid #ffffff; color: #ffffff; padding: 5px 14px; border-radius: 6px; font: 700 10px/1 'JetBrains Mono', monospace; cursor: pointer; transition: background 0.15s; }
+#errOverlay .err-btn:hover { background: rgba(255,255,255,0.3); }
+#errOverlay .err-btn.copy { border-color: #ffffff; color: #ffffff; background: rgba(255,255,255,0.1); }
+#errOverlay .err-btn.copy:hover { background: rgba(255,255,255,0.25); }
+
+#modeToggle { display: none; align-items: center; flex-shrink: 0; }
+
+/* ── GitHub Config Panel ── */
+#ghConfigPanel {
+  position: fixed; bottom: 72px; right: 16px; z-index: 300;
+  background: rgba(4,8,60,0.97); border: 1px solid rgba(255,255,255,0.4);
+  border-radius: 12px; padding: 18px 20px; width: 380px;
+  font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #ffffff;
+  backdrop-filter: blur(16px); box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+  display: none; flex-direction: column; gap: 12px;
+}
+#ghConfigPanel.open { display: flex; }
+#ghConfigPanel h4 { color: #ffffff; font-size: 12px; margin-bottom: 2px; letter-spacing: 0.5px; }
+#ghConfigPanel .gh-row { display: flex; gap: 8px; align-items: center; }
+#ghConfigPanel label { color: #ffffff; font-size: 10px; min-width: 70px; }
+#ghConfigPanel input[type="text"], #ghConfigPanel input[type="password"] {
+  flex: 1; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.25);
+  color: #ffffff; padding: 6px 10px; border-radius: 6px;
+  font: 11px 'JetBrains Mono', monospace; outline: none;
+}
+#ghConfigPanel input:focus { border-color: #ffffff; }
+#ghConfigPanel .gh-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+#ghConfigPanel .gh-btn { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.4); color: #ffffff; padding: 6px 14px; border-radius: 6px; font: 700 10px 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s; }
+#ghConfigPanel .gh-btn:hover { background: rgba(255,255,255,0.15); border-color: #ffffff; }
+#ghConfigPanel .gh-btn.save { border-color: #ffffff; color: #ffffff; }
+#ghConfigPanel .gh-btn.save:hover { background: rgba(255,255,255,0.15); }
+#ghConfigPanel .gh-hint { color: #ffffff; font-size: 9px; line-height: 1.5; }
+#ghConfigPanel .gh-repo-list { display: flex; flex-direction: column; gap: 4px; max-height: 120px; overflow-y: auto; }
+#ghConfigPanel .gh-repo-item { display: flex; gap: 6px; align-items: center; background: rgba(0,0,0,0.3); border-radius: 6px; padding: 4px 8px; }
+#ghConfigPanel .gh-repo-item input[type="text"] { flex: 1; font-size: 10px; padding: 4px 8px; }
+#ghConfigPanel .gh-repo-item .gh-star { color: #ffffff; cursor: pointer; font-size: 13px; }
+#ghConfigPanel .gh-repo-item .gh-star.active { color: #ffffff; text-shadow: 0 0 6px #ffffff; }
+#ghConfigPanel .gh-repo-item .gh-del { color: #ffffff; cursor: pointer; font-size: 13px; margin-left: 2px; }
+#ghConfigPanel .gh-add-row { display: flex; gap: 6px; }
+#ghConfigPanel .gh-add-row input { flex: 1; font-size: 10px; }
+
+/* ── Push Button ── */
+#pushBtn {
+  background: #000432; border: 1px solid #ffffff;
+  color: #ffffff; height: 26px; min-width: 26px; padding: 0 8px; border-radius: 6px;
+  font: 700 13px/1 'JetBrains Mono', monospace;
+  cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+#pushBtn:hover:not(:disabled) { background: #ffffff; color: #000432; border-color: #ffffff; }
+#pushBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+#pushBtn.pushing { border-color: #ffffff; color: #ffffff; animation: pushpulse 0.7s infinite alternate; }
+@keyframes pushpulse { from { opacity: 0.5; } to { opacity: 1; } }
+
+#ghSettingsBtn {
+  background: #000432; border: 1px solid #ffffff;
+  color: #ffffff; height: 26px; min-width: 26px; padding: 0 8px; border-radius: 6px;
+  font: 700 13px/1 'JetBrains Mono', monospace;
+  cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+#ghSettingsBtn:hover { background: #ffffff; color: #000432; border-color: #ffffff; }
+#ghSettingsBtn.active { background: #ffffff; color: #000432; border-color: #ffffff; }
+
+#ghNewRepoBtn {
+  background: #000432; border: 1px solid #ffffff;
+  color: #ffffff; height: 26px; min-width: 26px; padding: 0 8px; border-radius: 6px;
+  font: 700 13px/1 'JetBrains Mono', monospace;
+  cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+#ghNewRepoBtn:hover { background: #ffffff; color: #000432; border-color: #ffffff; }
+#ghNewRepoBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Repo Visibility Toggle Button ── */
+#repoVisBtn {
+  background: #000432; border: 1px solid #ffffff;
+  color: #ffffff; height: 26px; min-width: 26px; padding: 0 8px; border-radius: 6px;
+  font: 700 13px/1 'JetBrains Mono', monospace;
+  cursor: pointer; flex-shrink: 0; transition: all 0.15s;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+#repoVisBtn:hover { background: #ffffff; color: #000432; border-color: #ffffff; }
+#repoVisBtn.active { background: #ffffff; color: #000432; border-color: #ffffff; }
+
+/* ── Repo Visibility Modal ── */
+#repoVisModal {
+  position: fixed; inset: 0; z-index: 550;
+  background: rgba(0,0,0,0.7); display: none;
+  align-items: center; justify-content: center; backdrop-filter: blur(4px);
+}
+#repoVisModal.open { display: flex; }
+#repoVisModalBox {
+  background: rgba(4,8,60,0.98); border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 14px; padding: 24px; width: 380px; max-width: 94vw;
+  max-height: 80vh; overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace; color: #ffffff;
+  box-shadow: 0 8px 60px rgba(0,0,0,0.7);
+}
+#repoVisModalBox h4 { color: #ffffff; margin-bottom: 10px; font-size: 13px; }
+.rv-hint { color: #ffffff; font-size: 9px; line-height: 1.5; margin-bottom: 12px; opacity: 0.8; }
+.rv-list { display: flex; flex-direction: column; gap: 6px; max-height: 280px; overflow-y: auto; }
+.rv-item {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(0,0,0,0.3); border-radius: 6px; padding: 6px 10px;
+}
+.rv-item label { flex: 1; font-size: 10px; color: #ffffff; cursor: pointer; word-break: break-all; }
+.rv-item input[type="checkbox"] {
+  -webkit-appearance: none; appearance: none;
+  width: 15px; height: 15px; cursor: pointer; margin: 0;
+  border: 1.5px solid #ffffff; border-radius: 4px;
+  background: #000432; position: relative; flex-shrink: 0;
+}
+.rv-item input[type="checkbox"]:checked::after {
+  content: ''; position: absolute; left: 4px; top: -1px;
+  width: 4px; height: 8px;
+  border: solid #ffffff; border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.rv-row { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+.rv-btn { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.4); color: #ffffff; padding: 7px 14px; border-radius: 7px; font: 700 10px 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s; }
+.rv-btn:hover { background: rgba(255,255,255,0.15); }
+
+/* ── New Repo Modal ── */
+#newRepoModal {
+  position: fixed; inset: 0; z-index: 600;
+  background: rgba(0,0,0,0.75); display: none;
+  align-items: center; justify-content: center; backdrop-filter: blur(4px);
+}
+#newRepoModal.open { display: flex; }
+#newRepoModalBox {
+  background: rgba(4,8,60,0.98); border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 14px; padding: 24px; width: 440px; max-width: 94vw;
+  max-height: 86vh; overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace; color: #ffffff;
+  box-shadow: 0 8px 60px rgba(0,0,0,0.7);
+}
+#newRepoModalBox h4 { color: #ffffff; margin-bottom: 14px; font-size: 13px; }
+#newRepoModalBox .nr-label { color: #ffffff; font-size: 10px; margin-bottom: 6px; margin-top: 12px; }
+#newRepoModalBox .nr-hint { color: #ffffff; font-size: 9px; line-height: 1.5; margin-top: 4px; }
+#newRepoModalBox input[type="text"], #newRepoModalBox textarea {
+  width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3);
+  color: #ffffff; padding: 8px 12px; border-radius: 8px;
+  font: 11px 'JetBrains Mono', monospace; outline: none;
+}
+#newRepoModalBox textarea { resize: vertical; min-height: 120px; white-space: pre; }
+#newRepoModalBox input:focus, #newRepoModalBox textarea:focus { border-color: #ffffff; }
+#newRepoModalBox .nr-row { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+#newRepoModalBox .nr-mode-row { display: flex; gap: 8px; margin-top: 6px; }
+.nr-mode-btn {
+  flex: 1; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3);
+  color: #ffffff; padding: 8px; border-radius: 8px;
+  font: 700 10px/1 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s;
+}
+.nr-mode-btn.active { border-color: #ffffff; background: rgba(255,255,255,0.15); }
+.nr-btn { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.4); color: #ffffff; padding: 7px 18px; border-radius: 7px; font: 700 10px 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s; }
+.nr-btn:hover { background: rgba(255,255,255,0.15); }
+.nr-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.nr-btn.cancel { border-color: #ffffff; color: #ffffff; }
+.nr-btn.cancel:hover { background: rgba(255,255,255,0.15); }
+#nrFileInput { display: none; }
+#nrFileLabel {
+  display: inline-block; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3);
+  color: #ffffff; padding: 8px 14px; border-radius: 8px; font: 700 10px/1 'JetBrains Mono', monospace;
+  cursor: pointer; transition: all 0.15s;
+}
+#nrFileLabel:hover { background: rgba(255,255,255,0.12); }
+#nrFileName { color: #ffffff; font-size: 10px; margin-left: 8px; }
+#nrProgress { color: #ffffff; font-size: 10px; margin-top: 10px; line-height: 1.6; white-space: pre-wrap; display: none; }
+#nrResultLink { color: #ffffff; font-size: 11px; margin-top: 8px; display: none; word-break: break-all; }
+#nrResultLink a { color: #ffffff; }
+
+/* ── Commit Modal ── */
+#commitModal {
+  position: fixed; inset: 0; z-index: 500;
+  background: rgba(0,0,0,0.7); display: none;
+  align-items: center; justify-content: center; backdrop-filter: blur(4px);
+}
+#commitModal.open { display: flex; }
+#commitModalBox {
+  background: rgba(4,8,60,0.98); border: 1px solid rgba(255,255,255,0.5);
+  border-radius: 14px; padding: 24px; width: 420px; max-width: 94vw;
+  font-family: 'JetBrains Mono', monospace; color: #ffffff;
+  box-shadow: 0 8px 60px rgba(0,0,0,0.7);
+}
+#commitModalBox h4 { color: #ffffff; margin-bottom: 14px; font-size: 13px; }
+#commitModalBox .cm-label { color: #ffffff; font-size: 10px; margin-bottom: 6px; }
+#commitMsgInput {
+  width: 100%; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3);
+  color: #ffffff; padding: 8px 12px; border-radius: 8px;
+  font: 11px 'JetBrains Mono', monospace; outline: none; resize: vertical; min-height: 60px;
+}
+#commitMsgInput:focus { border-color: #ffffff; }
+#commitModalBox .cm-row { display: flex; gap: 8px; margin-top: 14px; justify-content: flex-end; }
+.cm-btn { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.4); color: #ffffff; padding: 7px 18px; border-radius: 7px; font: 700 10px 'JetBrains Mono', monospace; cursor: pointer; transition: all 0.15s; }
+.cm-btn:hover { background: rgba(255,255,255,0.15); }
+.cm-btn.cancel { border-color: #ffffff; color: #ffffff; }
+.cm-btn.cancel:hover { background: rgba(255,255,255,0.15); }
+
+/* ── Patch Status Indicator ── */
+#bridgeIndicator {
+  position: fixed; top: 8px; right: 12px; z-index: 9998;
+  background: #000432; border: 1px solid #ffffff;
+  color: #ffffff; padding: 4px 10px; border-radius: 12px;
+  font: 700 9px/1 'JetBrains Mono', monospace; letter-spacing: 0.5px;
+  cursor: default; transition: all 0.3s;
+}
+#bridgeIndicator.active { border-color: #ffffff; color: #ffffff; box-shadow: 0 0 8px #ffffff; }
+#bridgeIndicator.receiving { border-color: #ffffff; color: #ffffff; box-shadow: 0 0 8px #ffffff; }
+#bridgeIndicator.error { border-color: #ffffff; color: #ffffff; }
+</style>
+</head>
+<body class="compact-layout">
+
+<div id="bridgeIndicator">📋 Patch: Ready</div>
+
+<iframe id="preview" sandbox="allow-scripts allow-same-origin allow-modals allow-forms allow-popups"></iframe>
+<textarea id="codeView" spellcheck="false" placeholder="Raw code goes here..."></textarea>
+
+<div id="fring"></div>
+
+<div id="statusBar">
+  <span class="status-item" id="statusLeft">⚡ Manual Patch Mode</span>
+  <span class="status-item" id="statusRight">📄 Workspace Empty</span>
+</div>
+
+<div id="controlBar">
+  <div id="repoBar">
+    <span class="repo-bar-empty">... Loading repos</span>
+  </div>
+  <div id="bottom-controls">
+    <button id="repoVisBtn" title="Choose which repos show in the bottom bar">&#x1F441;</button>
+    <input type="text" id="aiInstruction" class="btn" style="border-color:#ffffff;color:#ffffff;" placeholder="Instructions for AI...">
+    <div id="payloadToggles">
+      <label title="Include the base system prompt"><input type="checkbox" id="incSuperPrompt" checked></label>
+      <label title="Include your typed instructions"><input type="checkbox" id="incInstructions" checked></label>
+      <label title="Include the current source code"><input type="checkbox" id="incSource" checked></label>
+    </div>
+    <button id="payloadBtn" class="btn" style="border-color:#ffffff;color:#ffffff;" title="Build &amp; copy payload">▲</button>
+    <button id="pasteAndProcessBtn" class="btn" style="border-color:#ffffff;color:#ffffff;" title="Read clipboard now and apply the patch (supports OLD===SPLIT===NEW and ===BLOCK=== formats)">&#x2318;</button>
+    <button id="pushBtn" disabled title="Commit &amp; Push to GitHub">&#x2191;</button>
+    <button id="promptBtn" class="btn" style="display:none;border-color:#ffffff;color:#ffffff;" title="Copy super-prompt">&#x2605;</button>
+    <button id="astBtn" class="btn" style="display:none;border-color:#ffffff;color:#ffffff;" title="AST Health Check">&#x25C6;</button>
+    <select id="aiSelector" class="btn" style="border-color:#ffffff;color:#ffffff;margin-left:8px;">
+      <option value="">&#x25B8; Launch AI</option>
+      <option value="https://gemini.google.com/app">Gemini</option>
+      <option value="https://chatgpt.com/">ChatGPT</option>
+      <option value="https://claude.ai/new">Claude</option>
+      <option value="https://www.phind.com/">Phind</option>
+    </select>
+  </div>
+  <div class="ctrl-sep"></div>
+  <div id="controls">
+    <select id="clipHistory" class="btn" style="display:none;border-color:#ffffff;color:#ffffff;max-width:130px;">
+      <option value="">&#x29C9; History</option>
+    </select>
+    <button id="undoBtn" class="btn" style="border-color:#ffffff;color:#ffffff;" disabled title="Undo (Ctrl+Z)">&#x21B6;</button>
+    <button id="redoBtn" class="btn" style="border-color:#ffffff;color:#ffffff;" disabled title="Redo (Ctrl+Y)">&#x21B7;</button>
+    <button id="revertBtn" class="btn" style="display:none!important;border-color:#ffffff;color:#ffffff;" title="Reload from disk">&#x21BA;</button>
+    <button id="fileBtn" class="btn" title="Open / Link file">&#x2317;</button>
+    <button id="viewModeBtn" class="btn" style="border-color:#ffffff;color:#ffffff;" title="Toggle Web Preview / Raw Code">&#x25A1;</button>
+  </div>
+  <div class="ctrl-sep"></div>
+  <div id="git-controls">
+    <button id="ghSettingsBtn" title="GitHub Settings">&#x2699;</button>
+    <button id="ghNewRepoBtn" title="Create a new GitHub repo + Pages site">+</button>
+  </div>
+</div>
+
+<div id="shortcutBar">
+  <span class="sc-label">⚡ SHORTCUTS</span>
+</div>
+
+<div id="ghConfigPanel">
+  <h4>🐙 GitHub Integration</h4>
+  <div class="gh-row">
+    <label>Token</label>
+    <input type="password" id="ghToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx">
+  </div>
+  <div class="gh-hint">Personal Access Token with <strong>repo</strong> scope. Stored locally only.</div>
+  <div class="gh-row">
+    <label>Username</label>
+    <input type="text" id="ghUser" placeholder="your-github-username">
+  </div>
+  <div style="color:#ffffff;font-size:10px;margin-top:2px;">📁 Repositories (owner/repo)</div>
+  <div class="gh-repo-list" id="ghRepoList"></div>
+  <div class="gh-add-row">
+    <input type="text" id="ghNewRepo" placeholder="owner/repo-name (e.g. you/myapp)">
+    <button class="gh-btn" id="ghAddRepoBtn">+ Add</button>
+  </div>
+  <div class="gh-row" style="margin-top:2px;">
+    <label>Branch</label>
+    <input type="text" id="ghBranch" placeholder="main">
+  </div>
+  <div class="gh-row">
+    <label>File path</label>
+    <input type="text" id="ghFilePath" placeholder="index.html">
+  </div>
+  <div class="gh-hint">File path inside the repo. Default: <code>index.html</code></div>
+  <div class="gh-actions">
+    <button class="gh-btn" id="ghSyncNowBtn">🔄 Sync Repos</button>
+    <button class="gh-btn save" id="ghSaveBtn">💾 Save Settings</button>
+    <button class="gh-btn" id="ghClosePanelBtn">✕ Close</button>
+  </div>
+</div>
+
+<div id="commitModal">
+  <div id="commitModalBox">
+    <h4>⬆ Commit &amp; Push</h4>
+    <div class="cm-label">Commit message</div>
+    <textarea id="commitMsgInput" placeholder="Update index.html via AI Compile"></textarea>
+    <div class="cm-row">
+      <button class="cm-btn cancel" id="cmCancelBtn">✕ Cancel</button>
+      <button class="cm-btn" id="cmConfirmBtn">⬆ Push to GitHub</button>
+    </div>
+  </div>
+</div>
+
+<div id="newRepoModal">
+  <div id="newRepoModalBox">
+    <h4>🐙 Create New Repo + Pages Site</h4>
+
+    <div id="nrStep1">
+      <div class="nr-label">Repo name</div>
+      <input type="text" id="nrRepoName" placeholder="my-new-app">
+      <div class="nr-hint">Will be created as a <strong>public</strong> repo under your GitHub account (token's owner), so GitHub Pages works on the free tier.</div>
+      <div class="nr-row">
+        <button class="nr-btn cancel" id="nrCancelBtn1">✕ Cancel</button>
+        <button class="nr-btn" id="nrNextBtn">Next →</button>
+      </div>
+    </div>
+
+    <div id="nrStep2" style="display:none;">
+      <div class="nr-label">Add content via</div>
+      <div class="nr-mode-row">
+        <button class="nr-mode-btn active" id="nrModeFileBtn">📁 File Upload</button>
+        <button class="nr-mode-btn" id="nrModePasteBtn">📋 Paste Code</button>
+      </div>
+
+      <div id="nrFileSection">
+        <div class="nr-label">Choose a file</div>
+        <label id="nrFileLabel" for="nrFileInput">📁 Choose File</label>
+        <input type="file" id="nrFileInput">
+        <span id="nrFileName"></span>
+        <div class="nr-hint">The file's contents will be pushed as <strong>index.html</strong>, regardless of its original name/extension.</div>
+      </div>
+
+      <div id="nrPasteSection" style="display:none;">
+        <div class="nr-label">Paste your code</div>
+        <textarea id="nrPasteArea" placeholder="<!DOCTYPE html>..."></textarea>
+        <div class="nr-hint">Will be saved as <strong>index.html</strong> in the new repo.</div>
+      </div>
+
+      <div id="nrProgress"></div>
+      <div id="nrResultLink"></div>
+
+      <div class="nr-row">
+        <button class="nr-btn cancel" id="nrBackBtn">← Back</button>
+        <button class="nr-btn" id="nrCreateBtn">🚀 Create Repo &amp; Page</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="repoVisModal">
+  <div id="repoVisModalBox">
+    <h4>👁 Bottom Bar Repos</h4>
+    <div class="rv-hint">Choose which repos appear as tabs in the bottom bar. Unchecked repos stay in your list but won't show as tabs.</div>
+    <div class="rv-list" id="repoVisList"></div>
+    <div class="rv-row">
+      <button class="rv-btn" id="rvSelectAllBtn">☑ Select All</button>
+      <button class="rv-btn" id="rvCloseBtn">✕ Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="astPanel"><h4>🧠 Local AST Health</h4><div id="astContent">Load a file to analyse.</div></div>
+<div id="errOverlay">
+  <div class="err-header">
+    <span class="err-title">⚠️ PATCH ERROR</span>
+  </div>
+  <div class="err-body" id="errBody"></div>
+  <div class="err-actions">
+    <button class="err-btn copy" id="errCopyBtn">📋 Copy Error</button>
+    <button class="err-btn" id="errDismissBtn">✕ Dismiss</button>
+  </div>
+</div>
+
+<script>
+  // ── Main App State ────────────────────────────────────────────────────
+  var lastClip = '';
+  var clipHistoryArray = [];
+  var isInternalCopy = false;
+  var isCodeMode = false;
+  var pendingOldCode = null;  // State memory for the Old Patch / New Patch two-step workflow
+
+  const $pv       = document.getElementById('preview');
+  const $codeView = document.getElementById('codeView');
+  const $fring    = document.getElementById('fring');
+  const $toast    = document.getElementById('toast');
+
+  var fileHandle    = null;
+  var sourceContent = '';
+  var undoStack     = [];
+  var redoStack     = [];
+  var autoMode      = true;
+
+  // ── GitHub State (persisted to localStorage + Firebase Realtime DB) ──
+  var ghToken       = '';
+  var ghUser        = '';
+  var ghBranch      = 'main';
+  var ghFilePath    = 'index.html';
+  var ghRepos       = [];
+  var ghCurrentRepo = '';
+
+  function ghApplyCfg(cfg) {
+    if (!cfg) return;
+    ghToken    = cfg.token    || '';
+    ghUser     = cfg.user     || '';
+    ghBranch   = cfg.branch   || 'main';
+    ghFilePath = cfg.filePath || 'index.html';
+    ghRepos    = cfg.repos    || [];
+  }
+  function ghLoadConfig() {
+    try {
+      const saved = localStorage.getItem('aicompiler_gh_config');
+      if (saved) ghApplyCfg(JSON.parse(saved));
+    } catch(e) {}
+  }
+  function ghSaveConfig() {
+    const cfg = { token: ghToken, user: ghUser, branch: ghBranch, filePath: ghFilePath, repos: ghRepos, shortcuts: scShortcuts, scLocked: scLocked };
+    localStorage.setItem('aicompiler_gh_config', JSON.stringify(cfg));
+    if (window._fbSaveConfig) window._fbSaveConfig(cfg).catch(() => {});
+  }
+  async function ghLoadConfigFromFirebase() {
+    try {
+      if (window._fbLoadConfig) {
+        const cfg = await window._fbLoadConfig();
+        if (cfg) {
+          ghApplyCfg(cfg);
+          localStorage.setItem('aicompiler_gh_config', JSON.stringify(cfg));
+          if (cfg.shortcuts) {
+            scShortcuts = cfg.shortcuts;
+            localStorage.setItem('aicompiler_shortcuts', JSON.stringify(scShortcuts));
+          }
+          if (typeof cfg.scLocked !== 'undefined') {
+            scLocked = cfg.scLocked;
+            localStorage.setItem('aicompiler_sc_locked', String(scLocked));
+          }
+        }
+      }
+    } catch(e) {}
+  }
+  function ghBuildDropdown() {
+    const bar = document.getElementById('repoBar');
+    bar.innerHTML = '';
+    if (ghRepos.length === 0) {
+      bar.innerHTML = '<span class="repo-bar-empty">⚠ No repos — open ⚙ GH to add</span>';
+      document.getElementById('pushBtn').disabled = true;
+      return;
+    }
+    var defaultFound = false;
+    ghRepos.forEach(r => { if (r.isDefault && !defaultFound) { ghCurrentRepo = r.name; defaultFound = true; } });
+    if (!defaultFound) { ghCurrentRepo = ghRepos[0].name; }
+    const visibleRepos = ghRepos.filter(r => r.visible !== false);
+    if (visibleRepos.length === 0) {
+      bar.innerHTML = '<span class="repo-bar-empty">⚠ All repos hidden — open 👁 to show</span>';
+    }
+    visibleRepos.forEach(r => {
+      const btn = document.createElement('button');
+      btn.className = 'repo-btn' + (r.name === ghCurrentRepo ? ' active' : '');
+      btn.textContent = r.name.split('/').pop();
+      btn.title = r.name + '\n(Drag to shortcut bar to pin)';
+      btn.draggable = true;
+      btn.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', r.name); e.dataTransfer.setData('sc-type', 'repo'); btn.style.opacity = '0.5'; });
+      btn.addEventListener('dragend', () => { btn.style.opacity = ''; });
+      btn.addEventListener('click', async () => {
+        bar.querySelectorAll('.repo-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        ghRepos.forEach(x => x.isDefault = (x.name === r.name));
+        ghCurrentRepo = r.name;
+        document.getElementById('pushBtn').disabled = false;
+        ghSaveConfig();
+        await ghSyncFromRepo(r.name, false);
+      });
+      bar.appendChild(btn);
+    });
+    document.getElementById('pushBtn').disabled = !ghCurrentRepo;
+  }
+  function ghRenderRepoPanelList() {
+    const list = document.getElementById('ghRepoList');
+    list.innerHTML = '';
+    ghRepos.forEach((r, idx) => {
+      const row = document.createElement('div');
+      row.className = 'gh-repo-item';
+      row.innerHTML = `<input type="text" value="${r.name}" data-idx="${idx}" class="gh-repo-name-inp" placeholder="owner/repo"><span class="gh-star ${r.isDefault ? 'active' : ''}" data-idx="${idx}" title="Set as default">★</span><span class="gh-del" data-idx="${idx}" title="Remove">✕</span>`;
+      list.appendChild(row);
+    });
+    list.querySelectorAll('.gh-repo-name-inp').forEach(inp => { inp.addEventListener('change', e => { ghRepos[+e.target.dataset.idx].name = e.target.value.trim(); ghSaveConfig(); ghBuildDropdown(); }); });
+    list.querySelectorAll('.gh-star').forEach(star => { star.addEventListener('click', e => { const idx = +e.target.dataset.idx; ghRepos.forEach((r,i) => r.isDefault = (i===idx)); ghSaveConfig(); ghRenderRepoPanelList(); ghBuildDropdown(); toast('★ Default repo set: ' + ghRepos[idx].name); }); });
+    list.querySelectorAll('.gh-del').forEach(btn => { btn.addEventListener('click', e => { const idx = +e.target.dataset.idx; ghRepos.splice(idx,1); ghSaveConfig(); ghRenderRepoPanelList(); ghBuildDropdown(); }); });
+  }
+
+  // ── Repo Visibility Modal — choose which repos show as tabs in the bottom bar ──
+  function renderRepoVisList() {
+    const list = document.getElementById('repoVisList');
+    list.innerHTML = '';
+    if (ghRepos.length === 0) { list.innerHTML = '<div class="rv-hint">No repos yet — add one in ⚙ GH settings first.</div>'; return; }
+    ghRepos.forEach((r, idx) => {
+      const row = document.createElement('div');
+      row.className = 'rv-item';
+      const checked = r.visible !== false;
+      row.innerHTML = `<input type="checkbox" id="rv-${idx}" data-idx="${idx}" ${checked ? 'checked' : ''}><label for="rv-${idx}">${r.name}</label>`;
+      list.appendChild(row);
+    });
+    list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      cb.addEventListener('change', (e) => {
+        const idx = +e.target.dataset.idx;
+        ghRepos[idx].visible = e.target.checked;
+        ghSaveConfig();
+        ghBuildDropdown();
+      });
+    });
+  }
+  document.getElementById('repoVisBtn').addEventListener('click', () => {
+    renderRepoVisList();
+    document.getElementById('repoVisModal').classList.add('open');
+    document.getElementById('repoVisBtn').classList.add('active');
+  });
+  document.getElementById('rvCloseBtn').addEventListener('click', () => {
+    document.getElementById('repoVisModal').classList.remove('open');
+    document.getElementById('repoVisBtn').classList.remove('active');
+  });
+  document.getElementById('rvSelectAllBtn').addEventListener('click', () => {
+    ghRepos.forEach(r => r.visible = true);
+    ghSaveConfig(); ghBuildDropdown(); renderRepoVisList();
+    toast('☑ All repos shown in bottom bar');
+  });
+
+  async function ghSyncFromRepo(repoName, silent) {
+    if (!ghToken || !repoName) return;
+    const branch = ghBranch || 'main';
+    const path   = ghFilePath || 'index.html';
+    const url    = `https://api.github.com/repos/${repoName}/contents/${path}?ref=${branch}`;
+    try {
+      if (!silent) toast('🔄 Syncing from GitHub…', 3000);
+      document.getElementById('statusLeft').textContent = `🔄 Syncing ${repoName}…`;
+      const res = await fetch(url, { headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json' } });
+      if (!res.ok) {
+        const errData = await res.json().catch(()=>({}));
+        if (!silent) toast(`❌ Sync failed: ${errData.message || res.status}`);
+        document.getElementById('statusLeft').textContent = `❌ Sync failed (${res.status})`;
+        return;
+      }
+      const data = await res.json();
+      const binary = atob(data.content.replace(/\s/g, ''));
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      sourceContent = new TextDecoder('utf-8').decode(bytes);
+      render(sourceContent);
+      document.getElementById('statusLeft').textContent = `✅ Synced: ${repoName}`;
+      if (!silent) toast(`✅ Loaded ${path} from ${repoName}`);
+    } catch(e) {
+      if (!silent) toast('❌ Sync error: ' + e.message);
+      document.getElementById('statusLeft').textContent = '❌ Sync error';
+    }
+  }
+  async function ghFetchAllRepos() {
+    if (!ghToken || !ghUser) return;
+    try {
+      document.getElementById('statusLeft').textContent = '🔄 Fetching repos…';
+      var page = 1, fetched = [];
+      while (true) {
+        const res = await fetch(`https://api.github.com/user/repos?per_page=100&page=${page}&sort=updated`, { headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json' } });
+        if (!res.ok) break;
+        const data = await res.json();
+        if (!data.length) break;
+        fetched = fetched.concat(data.map(r => r.full_name));
+        if (data.length < 100) break;
+        page++;
+      }
+      if (!fetched.length) return;
+      const existingNames = ghRepos.map(r => r.name);
+      fetched.forEach(name => { if (!existingNames.includes(name)) ghRepos.push({ name, isDefault: false }); });
+      ghSaveConfig(); ghBuildDropdown();
+      document.getElementById('statusLeft').textContent = `✅ Synced: ${ghCurrentRepo} · ${fetched.length} repos`;
+    } catch(e) { document.getElementById('statusLeft').textContent = '❌ Repo fetch error'; }
+  }
+// ── Full reconcile: adds repos you created, removes repos you deleted ──
+  async function ghSyncRepoList() {
+    if (!ghToken || !ghUser) return;
+    try {
+      document.getElementById('statusLeft').textContent = '🔄 Syncing repo list…';
+      var page = 1, fetched = [];
+      while (true) {
+        const res = await fetch(`https://api.github.com/user/repos?per_page=100&page=${page}&sort=updated`, { headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json' } });
+        if (!res.ok) break;
+        const data = await res.json();
+        if (!data.length) break;
+        fetched = fetched.concat(data.map(r => r.full_name));
+        if (data.length < 100) break;
+        page++;
+      }
+      if (!fetched.length) return;
+
+      const prevDefault = ghRepos.find(r => r.isDefault);
+      const removedCount = ghRepos.filter(r => !fetched.includes(r.name)).length;
+
+      // keep only repos that still exist remotely
+      ghRepos = ghRepos.filter(r => fetched.includes(r.name));
+      // add any new ones not already in the list
+      fetched.forEach(name => { if (!ghRepos.find(r => r.name === name)) ghRepos.push({ name, isDefault: false }); });
+
+      // restore/repick default if it got removed
+      if (!ghRepos.find(r => r.isDefault)) {
+        const restored = prevDefault && ghRepos.find(r => r.name === prevDefault.name);
+        if (restored) restored.isDefault = true;
+        else if (ghRepos.length) ghRepos[0].isDefault = true;
+      }
+
+      ghSaveConfig();
+      ghBuildDropdown();
+      document.getElementById('statusLeft').textContent =
+        removedCount ? `✅ Repo list synced (removed ${removedCount}, total ${ghRepos.length})`
+                     : `✅ Repo list synced (${ghRepos.length})`;
+    } catch(e) {
+      document.getElementById('statusLeft').textContent = '❌ Repo sync error';
+    }
+  }
+  document.getElementById('ghSettingsBtn').addEventListener('click', () => {
+    const panel = document.getElementById('ghConfigPanel');
+    const isOpen = panel.classList.contains('open');
+    if (isOpen) { panel.classList.remove('open'); document.getElementById('ghSettingsBtn').classList.remove('active'); }
+    else {
+      document.getElementById('ghToken').value    = ghToken;
+      document.getElementById('ghUser').value     = ghUser;
+      document.getElementById('ghBranch').value   = ghBranch;
+      document.getElementById('ghFilePath').value = ghFilePath;
+      ghRenderRepoPanelList();
+      panel.classList.add('open');
+      document.getElementById('ghSettingsBtn').classList.add('active');
+    }
+  });
+  document.getElementById('ghClosePanelBtn').addEventListener('click', () => { document.getElementById('ghConfigPanel').classList.remove('open'); document.getElementById('ghSettingsBtn').classList.remove('active'); });
+  document.getElementById('ghSaveBtn').addEventListener('click', () => {
+    ghToken    = document.getElementById('ghToken').value.trim();
+    ghUser     = document.getElementById('ghUser').value.trim();
+    ghBranch   = document.getElementById('ghBranch').value.trim() || 'main';
+    ghFilePath = document.getElementById('ghFilePath').value.trim() || 'index.html';
+    ghSaveConfig(); ghBuildDropdown(); toast('💾 GitHub settings saved!');
+  });
+  document.getElementById('ghAddRepoBtn').addEventListener('click', () => {
+    const val = document.getElementById('ghNewRepo').value.trim();
+    if (!val || !val.includes('/')) { toast('❌ Use format: owner/repo'); return; }
+    if (ghRepos.find(r => r.name === val)) { toast('ℹ Repo already in list'); return; }
+    const isFirst = ghRepos.length === 0;
+    ghRepos.push({ name: val, isDefault: isFirst });
+    document.getElementById('ghNewRepo').value = '';
+    ghSaveConfig(); ghRenderRepoPanelList(); ghBuildDropdown();
+    toast('✅ Repo added' + (isFirst ? ' (set as default)' : ''));
+  });
+  document.getElementById('ghSyncNowBtn').addEventListener('click', async () => {
+    ghToken    = document.getElementById('ghToken').value.trim();
+    ghUser     = document.getElementById('ghUser').value.trim();
+    ghBranch   = document.getElementById('ghBranch').value.trim() || 'main';
+    ghFilePath = document.getElementById('ghFilePath').value.trim() || 'index.html';
+    ghSaveConfig(); await ghFetchAllRepos(); ghRenderRepoPanelList(); toast('✅ Repos synced from GitHub!');
+  });
+  document.getElementById('pushBtn').addEventListener('click', () => {
+    if (!sourceContent) { toast('❌ Nothing to push — load content first'); return; }
+    if (!ghToken)       { toast('❌ GitHub token not set — open ⚙ GH settings'); return; }
+    if (!ghCurrentRepo) { toast('❌ No repo selected'); return; }
+    const ts = new Date().toISOString().replace('T',' ').slice(0,19);
+    document.getElementById('commitMsgInput').value = `Update ${ghFilePath || 'index.html'} via AI Compile — ${ts}`;
+    document.getElementById('commitModal').classList.add('open');
+  });
+  document.getElementById('cmCancelBtn').addEventListener('click', () => { document.getElementById('commitModal').classList.remove('open'); });
+  document.getElementById('cmConfirmBtn').addEventListener('click', async () => {
+    const msg = document.getElementById('commitMsgInput').value.trim();
+    if (!msg) { toast('❌ Enter a commit message'); return; }
+    document.getElementById('commitModal').classList.remove('open');
+    await ghPushFile(msg);
+  });
+  async function ghGetFileSHA(repoName, path, branch) {
+    const url = `https://api.github.com/repos/${repoName}/contents/${path}?ref=${branch}`;
+    try {
+      const res = await fetch(url, { headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json' } });
+      if (res.status === 404) return null;
+      const data = await res.json();
+      return data.sha || null;
+    } catch(e) { return null; }
+  }
+  async function ghPushFile(commitMsg) {
+    const btn = document.getElementById('pushBtn');
+    btn.classList.add('pushing'); btn.disabled = true;
+    const branch   = ghBranch   || 'main';
+    const filePath = ghFilePath || 'index.html';
+    const repo     = ghCurrentRepo;
+    try {
+      toast('⬆ Pushing to GitHub…', 4000);
+      document.getElementById('statusLeft').textContent = `⬆ Pushing to ${repo}…`;
+      const sha = await ghGetFileSHA(repo, filePath, branch);
+      const encoded = btoa(unescape(encodeURIComponent(sourceContent)));
+      const body = { message: commitMsg, content: encoded, branch: branch };
+      if (sha) body.sha = sha;
+      const res = await fetch(`https://api.github.com/repos/${repo}/contents/${filePath}`, {
+        method: 'PUT',
+        headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById('statusLeft').textContent = `✅ Pushed to ${repo}`;
+        toast(`✅ Pushed! SHA: ${data.content?.sha?.slice(0,7) || 'ok'}`);
+      } else {
+        const err = await res.json().catch(()=>({}));
+        document.getElementById('statusLeft').textContent = `❌ Push failed`;
+        toast(`❌ Push failed: ${err.message || res.status}`);
+      }
+    } catch(e) {
+      document.getElementById('statusLeft').textContent = '❌ Push error';
+      toast('❌ Push error: ' + e.message);
+    } finally { btn.classList.remove('pushing'); btn.disabled = false; }
+  }
+
+  // ── Create New Repo + Push + Enable Pages ───────────────────────────────
+  function nrLog(msg) {
+    const el = document.getElementById('nrProgress');
+    el.style.display = 'block';
+    el.textContent += (el.textContent ? '\n' : '') + msg;
+    el.scrollTop = el.scrollHeight;
+  }
+
+  document.getElementById('ghNewRepoBtn').addEventListener('click', () => {
+    if (!ghToken) { toast('❌ Set your GitHub token first — open ⚙ GH settings'); return; }
+    document.getElementById('nrStep1').style.display = 'block';
+    document.getElementById('nrStep2').style.display = 'none';
+    document.getElementById('nrRepoName').value = '';
+    document.getElementById('nrProgress').style.display = 'none';
+    document.getElementById('nrProgress').textContent = '';
+    document.getElementById('nrResultLink').style.display = 'none';
+    document.getElementById('nrResultLink').innerHTML = '';
+    document.getElementById('nrCreateBtn').disabled = false;
+    document.getElementById('newRepoModal').classList.add('open');
+  });
+  document.getElementById('nrCancelBtn1').addEventListener('click', () => document.getElementById('newRepoModal').classList.remove('open'));
+  document.getElementById('nrBackBtn').addEventListener('click', () => {
+    document.getElementById('nrStep1').style.display = 'block';
+    document.getElementById('nrStep2').style.display = 'none';
+  });
+  document.getElementById('nrNextBtn').addEventListener('click', () => {
+    const name = document.getElementById('nrRepoName').value.trim();
+    if (!name) { toast('❌ Enter a repo name'); return; }
+    if (!/^[A-Za-z0-9._-]+$/.test(name)) { toast('❌ Use only letters, numbers, - . _'); return; }
+    document.getElementById('nrStep1').style.display = 'none';
+    document.getElementById('nrStep2').style.display = 'block';
+  });
+
+  var nrMode = 'file';
+  document.getElementById('nrModeFileBtn').addEventListener('click', () => {
+    nrMode = 'file';
+    document.getElementById('nrModeFileBtn').classList.add('active');
+    document.getElementById('nrModePasteBtn').classList.remove('active');
+    document.getElementById('nrFileSection').style.display = 'block';
+    document.getElementById('nrPasteSection').style.display = 'none';
+  });
+  document.getElementById('nrModePasteBtn').addEventListener('click', () => {
+    nrMode = 'paste';
+    document.getElementById('nrModePasteBtn').classList.add('active');
+    document.getElementById('nrModeFileBtn').classList.remove('active');
+    document.getElementById('nrPasteSection').style.display = 'block';
+    document.getElementById('nrFileSection').style.display = 'none';
+  });
+
+  var nrFileContent = null;
+  document.getElementById('nrFileInput').addEventListener('change', async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    nrFileContent = await f.text();
+    document.getElementById('nrFileName').textContent = `✓ ${f.name} (${nrFileContent.length} chars)`;
+  });
+
+  async function ghCreateRepo(name) {
+    const res = await fetch('https://api.github.com/user/repos', {
+      method: 'POST',
+      headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, private: false, auto_init: true })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || `Repo creation failed (${res.status})`);
+    return data; // includes .owner.login, .full_name, .default_branch
+  }
+
+  async function ghPutFile(fullRepoName, path, content, branch, commitMsg, sha) {
+    const encoded = btoa(unescape(encodeURIComponent(content)));
+    const body = { message: commitMsg, content: encoded, branch: branch };
+    if (sha) body.sha = sha;
+    const res = await fetch(`https://api.github.com/repos/${fullRepoName}/contents/${path}`, {
+      method: 'PUT',
+      headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.message || `File push failed (${res.status})`);
+    return data;
+  }
+
+  async function ghEnablePages(fullRepoName, branch) {
+    // Try creating the Pages site (branch deployment, served from root)
+    const res = await fetch(`https://api.github.com/repos/${fullRepoName}/pages`, {
+      method: 'POST',
+      headers: { Authorization: `token ${ghToken}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source: { branch: branch, path: '/' } })
+    });
+    if (res.status === 201 || res.status === 204) return true;
+    if (res.status === 409) return true; // Pages already enabled — fine
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.message || `Enabling Pages failed (${res.status})`);
+  }
+
+  document.getElementById('nrCreateBtn').addEventListener('click', async () => {
+    const repoName = document.getElementById('nrRepoName').value.trim();
+    if (!repoName) { toast('❌ Enter a repo name'); return; }
+
+    let content = null;
+    if (nrMode === 'file') {
+      if (!nrFileContent) { toast('❌ Choose a file first'); return; }
+      content = nrFileContent;
+    } else {
+      content = document.getElementById('nrPasteArea').value;
+      if (!content || !content.trim()) { toast('❌ Paste some code first'); return; }
+    }
+
+    const createBtn = document.getElementById('nrCreateBtn');
+    createBtn.disabled = true;
+    document.getElementById('nrProgress').textContent = '';
+    document.getElementById('nrProgress').style.display = 'block';
+
+    try {
+      nrLog(`⏳ Creating repo "${repoName}"…`);
+      const repoData = await ghCreateRepo(repoName);
+      const fullName = repoData.full_name;
+      const branch   = repoData.default_branch || 'main';
+      nrLog(`✅ Repo created: ${fullName}`);
+
+      // auto_init:true creates an initial commit (README), so index.html needs no sha yet — but check just in case
+      nrLog('⏳ Checking for existing index.html…');
+      const sha = await ghGetFileSHA(fullName, 'index.html', branch);
+
+      nrLog('⬆ Pushing content as index.html…');
+      await ghPutFile(fullName, 'index.html', content, branch, 'Initial commit via AI Compile (auto-renamed to index.html)', sha);
+      nrLog('✅ index.html pushed');
+
+      nrLog('⏳ Enabling GitHub Pages…');
+      await ghEnablePages(fullName, branch);
+      nrLog('✅ GitHub Pages enabled');
+
+      // Sync into the existing repo list / dropdown without touching its UI behavior
+      if (!ghRepos.find(r => r.name === fullName)) {
+        const isFirst = ghRepos.length === 0;
+        ghRepos.push({ name: fullName, isDefault: isFirst });
+        ghSaveConfig();
+        ghBuildDropdown();
+      }
+
+      // Also pin it as a shortcut so it shows up in the bottom shortcut bar (TNL / FFT / SYS / ★ style)
+      const scLabel = repoData.name;
+      const scUrl   = `https://github.com/${fullName}`;
+      if (!scShortcuts.find(s => s.label === scLabel && s.url === scUrl)) {
+        scShortcuts.push({ label: scLabel, url: scUrl });
+        scSave();
+        scRender();
+        nrLog(`📌 Pinned shortcut: ${scLabel}`);
+      }
+
+      const pagesUrl = `https://${repoData.owner.login}.github.io/${repoData.name}/`;
+      nrLog(`🌐 Site will be live shortly at:\n${pagesUrl}`);
+      nrLog('(First deploy can take 1-2 minutes to go live.)');
+
+      const linkEl = document.getElementById('nrResultLink');
+      linkEl.style.display = 'block';
+      linkEl.innerHTML = `🔗 <a href="${pagesUrl}" target="_blank" rel="noopener">${pagesUrl}</a>`;
+
+      toast('✅ Repo + Page created!');
+    } catch (err) {
+      nrLog(`❌ ${err.message}`);
+      toast('❌ ' + err.message);
+    } finally {
+      createBtn.disabled = false;
+    }
+  });
+
+  // ── Super Prompt ──────────────────────────────────────────────────────
+  const SUPER_PROMPT = `[Give me the results as Combined Find-and-Replace blocks. Put the old code and the new code inside a single code block separated by exactly ===SPLIT=== on its own line so I only have to click 'copy' once. 
+(Note: This works for ANY language. Ignore JS-specific scope rules if not applicable.)
+The 11 Surgery Scenarios You Must Handle:
+Scenario 1 (The Swap): Just changing one value or line for another.
+Scenario 2 (The Excision): Deleting code while keeping the rest of the file clean.
+Scenario 3 (The Injection): "Bolting on" brand new features to existing code.
+Scenario 4 (The Interceptor): Adding a safety check or a rule inside an existing process.
+Scenario 5 (The Migration): Moving a button or a piece of logic from one place to another.
+Scenario 6 (The Refactor): Rewriting a complex math formula or a loop to make it faster.
+Scenario 7 (The Sweep): Renaming a specific word/variable everywhere it appears.
+Scenario 8 (The Database Bump): Updating saved data settings so the app doesn't crash on old info.
+Scenario 9 (The Link Shift): Changing where the app connects to (APIs, URLs, or Tokens).
+Scenario 10 (The Sync): If you change the "Brain" (Web Worker), you must also fix the "Body" (Main Script).
+Scenario 11 (The Layer Fix): Fixing UI issues where things are hidden or unclickable.
+If any variable is declared with const or let inside a function or block that gets re-executed, move the declaration outside to the top of the script or convert it to var. Never declare the same identifier twice in the same scope.
+response must contain ONLY the code blocks. No warnings, no error messages, no annotations.
+If you have a concern about the existing code, state it in plain text BEFORE the code block — never inside it.
+Before you give me the solution, double-check that you haven't left any brackets } or parentheses ) unclosed.
+For multiple independent fixes, separate each OLD===SPLIT===NEW pair with ===BLOCK=== so I can batch-apply all at once with one copy.]
+`;
+
+  // ── App Init ──────────────────────────────────────────────────────────
+  window.addEventListener('load', async () => {
+    ghLoadConfig();
+    scLoad();
+    ghBuildDropdown();
+    scRender();
+
+    // Wait for Firebase module to initialise (ES module runs async)
+    var fbWait = 0;
+    while (!window._fbReady && fbWait < 20) { await new Promise(r => setTimeout(r, 50)); fbWait++; }
+    await ghLoadConfigFromFirebase();
+    scRender(); // re-render shortcuts now that Firebase data may have arrived
+
+    const DEFAULT_REPO = '888znq/TNL';
+    if (!ghRepos.find(r => r.name === DEFAULT_REPO)) {
+      ghRepos.unshift({ name: DEFAULT_REPO, isDefault: true });
+    }
+    if (!ghRepos.find(r => r.isDefault)) {
+      const tnl = ghRepos.find(r => r.name === DEFAULT_REPO);
+      if (tnl) tnl.isDefault = true;
+    }
+    ghBuildDropdown();
+
+    const defaultRepo = ghRepos.find(r => r.isDefault) || ghRepos[0];
+    const repoToSync  = defaultRepo ? defaultRepo.name : '';
+    if (repoToSync && ghToken) {
+      ghCurrentRepo = repoToSync;
+      document.getElementById('pushBtn').disabled = false;
+      await ghSyncFromRepo(repoToSync, false);
+    } else {
+      const saved = localStorage.getItem('aicompiler_source');
+      if (saved && !sourceContent) { sourceContent = saved; render(sourceContent); toast("💾 Restored previous session"); }
+    }
+
+    if (ghToken && ghUser) ghSyncRepoList();
+  });
+
+  // ── Patch Status Indicator ──────────────────────────────────────────────
+  const indicator = document.getElementById('bridgeIndicator');
+
+  // Clicking the indicator resets any stale state
+  indicator.addEventListener('click', () => {
+    pendingOldCode = null;
+    indicator.textContent = '📋 Patch: Ready';
+    indicator.className = '';
+    indicator.style.cursor = 'default';
+    indicator.title = '';
+  });
+
+  // ── Code / Web View Toggle ────────────────────────────────────────────
+  $codeView.addEventListener('input', (e) => {
+    if (!isCodeMode) return;
+    sourceContent = e.target.value;
+    localStorage.setItem('aicompiler_source', sourceContent);
+    if (fileHandle) nativeSilentSave(sourceContent);
+    updateStatusBar();
+  });
+  document.getElementById('viewModeBtn').addEventListener('click', (e) => {
+    isCodeMode = !isCodeMode;
+    if (isCodeMode) {
+      e.target.innerHTML = '&#x2261;'; e.target.style.borderColor = '#ffffff'; e.target.style.color = '#ffffff';
+      $pv.style.display = 'none'; $codeView.style.display = 'block';
+    } else {
+      e.target.innerHTML = '&#x25A1;'; e.target.style.borderColor = '#ffffff'; e.target.style.color = '#ffffff';
+      $pv.style.display = 'block'; $codeView.style.display = 'none';
+    }
+    render(sourceContent);
+    toast(isCodeMode ? "Code Mode Active" : "Web Mode Active");
+  });
+
+  // ── Error Overlay ─────────────────────────────────────────────────────
+  const $errOverlay = document.getElementById('errOverlay');
+  const $errBody    = document.getElementById('errBody');
+  var _lastErrMsg   = '';
+  function showErr(msg) { _lastErrMsg = msg; $errBody.textContent = msg; $errOverlay.style.display = 'block'; }
+  document.getElementById('errCopyBtn').addEventListener('click', async () => {
+    try {
+      const report = `PATCH ERROR — please fix and resend the patch.\n\nError: ${_lastErrMsg}\n\nCurrent source:\n${sourceContent}`;
+      isInternalCopy = true;
+      await navigator.clipboard.writeText(report);
+      setTimeout(() => { isInternalCopy = false; }, 1500);
+      document.getElementById('errCopyBtn').textContent = '✅ Copied!';
+      setTimeout(() => { document.getElementById('errCopyBtn').textContent = '📋 Copy Error'; }, 2000);
+    } catch(e) { toast("❌ Copy failed"); }
+  });
+  document.getElementById('errDismissBtn').addEventListener('click', () => { $errOverlay.style.display = 'none'; });
+  window.addEventListener('message', (e) => { if (e.data && e.data.__compilerErr) showErr(e.data.__compilerErr); });
+
+  // ── AST Panel ─────────────────────────────────────────────────────────
+  const $astPanel   = document.getElementById('astPanel');
+  const $astContent = document.getElementById('astContent');
+  document.getElementById('astBtn').addEventListener('click', () => {
+    $astPanel.style.display = $astPanel.style.display === 'block' ? 'none' : 'block';
+    if ($astPanel.style.display === 'block' && sourceContent) runASTCheck(sourceContent);
+  });
+
+  // ── AI Selector — opens the chosen AI site in a new tab (manual workflow: paste payload there, copy reply back) ──
+  document.getElementById('aiSelector').addEventListener('change', (e) => {
+    const aiUrl = e.target.value;
+    if (!aiUrl) return;
+    window.open(aiUrl, '_blank');
+    toast("🚀 Opened in new tab — paste the payload, then copy the reply back here.");
+    e.target.value = "";
+  });
+
+  // ── Payload Toggle Persistence (remember checkbox state across sessions) ──
+  (function initPayloadToggles() {
+    const ids = ['incSuperPrompt', 'incInstructions', 'incSource'];
+    ids.forEach(id => {
+      const saved = localStorage.getItem('aicompiler_' + id);
+      if (saved !== null) document.getElementById(id).checked = (saved === 'true');
+      document.getElementById(id).addEventListener('change', (e) => {
+        localStorage.setItem('aicompiler_' + id, String(e.target.checked));
+      });
+    });
+  })();
+
+  // ── Payload Button — builds prompt and copies it to clipboard ─────────
+  document.getElementById('payloadBtn').addEventListener('click', async () => {
+    const instruction = document.getElementById('aiInstruction').value.trim();
+    const wantSuper = document.getElementById('incSuperPrompt').checked;
+    const wantInstr = document.getElementById('incInstructions').checked;
+    const wantSource = document.getElementById('incSource').checked;
+
+    var parts = [];
+    if (wantSuper) parts.push(SUPER_PROMPT);
+    if (wantInstr && instruction) parts.push(instruction);
+    if (wantSource) parts.push(sourceContent ? sourceContent : "(No source loaded)");
+
+    if (parts.length === 0) {
+      toast("⚠️ Nothing selected — check at least one box");
+      return;
+    }
+    
+    // Join with a blank line between each section, and append 
+    // the invisible 3-space signature for AutoPayload.ahk to detect
+    var payload = parts.join("\n\n") + "\u200B\u200B\u200B";
+
+    try {
+      isInternalCopy = true;
+      lastClip = payload;
+      await navigator.clipboard.writeText(payload);
+      setTimeout(() => { isInternalCopy = false; }, 1500);
+      toast("🚀 Payload Copied! Paste it into Claude.");
+      document.getElementById('statusLeft').textContent = '🚀 Payload copied — paste into Claude, then Copy its reply';
+    } catch (err) { toast("❌ Failed to copy payload"); }
+  });
+
+  // ── Paste & Process button — reads clipboard and applies the patch immediately ──
+  // Supports combined OLD===SPLIT===NEW blocks (single or ===BLOCK=== batches).
+  document.getElementById('pasteAndProcessBtn').addEventListener('click', async () => {
+    if (!sourceContent) { toast("❌ No source loaded — link a file first"); return; }
+    let text;
+    try { text = await navigator.clipboard.readText(); }
+    catch (err) { toast("❌ Couldn't read clipboard — copy the patch from Claude first"); return; }
+
+    if (!text || !text.trim()) { toast("⚠️ Clipboard is empty"); return; }
+
+    lastClip = text;
+    addToHistory(text);
+
+    const ind = document.getElementById('bridgeIndicator');
+    ind.textContent = '📋 Patching…';
+    ind.className = 'receiving';
+
+    const blocks = parseAllBlocks(text);
+    if (!blocks || blocks.length === 0) {
+      ind.textContent = '📋 Patch: Ready';
+      ind.className = '';
+      showErr(`No valid patch found in clipboard.\n\nExpected format:\n  OLD code\n===SPLIT===\n  NEW code\n\nFor multiple patches separate each pair with ===BLOCK===.`);
+      return;
+    }
+
+    let allOk = true;
+    for (const block of blocks) {
+      const ok = await autoLockAndApply(block);
+      if (!ok) { allOk = false; break; }
+    }
+
+    pendingOldCode = null;
+    ind.textContent = '📋 Patch: Ready';
+    ind.className = allOk ? 'active' : '';
+    if (allOk) {
+      document.getElementById('statusLeft').textContent = `✨ Patch applied @ ${new Date().toLocaleTimeString()}`;
+      if (blocks.length > 1) toast(`⚡ ${blocks.length} patches applied!`);
+    }
+  });
+
+  // ── Prompt button ─────────────────────────────────────────────────────
+  document.getElementById('promptBtn').addEventListener('click', async () => {
+    try {
+      isInternalCopy = true;
+      lastClip = SUPER_PROMPT;
+      // Also append signature here so AHK works if you use this button
+      await navigator.clipboard.writeText(SUPER_PROMPT + "\u200B\u200B\u200B");
+      setTimeout(() => { isInternalCopy = false; }, 1500);
+      toast("🤖 Prompt Copied to Clipboard!");
+    } catch (err) { toast("❌ Failed to copy prompt."); }
+  });
+
+  // ── Status Bar ────────────────────────────────────────────────────────
+  function updateStatusBar() {
+    const lines = sourceContent ? sourceContent.split('\n').length : 0;
+    const name  = fileHandle ? fileHandle.name : (sourceContent ? (ghCurrentRepo || 'Memory') : 'Empty');
+    document.getElementById('statusRight').textContent = `📄 ${name} · ${lines} lines · ↩ ${undoStack.length} | ↪ ${redoStack.length}`;
+  }
+
+  // ── AST Check ─────────────────────────────────────────────────────────
+  function runASTCheck(src) {
+    if (isCodeMode) { $astContent.innerHTML = '<span class="ast-warn">⚠️ AST Check is bypassed in Code Mode.</span>'; return; }
+    const results = [];
+    const brackets = { '{': 0, '(': 0, '[': 0 };
+    const closers  = { '}': '{', ')': '(', ']': '[' };
+    var inStr = false, strChar = '', inTempl = 0;
+    for (var i = 0; i < src.length; i++) {
+      const ch = src[i];
+      if (inStr) { if (ch === '\\') { i++; continue; } if (ch === strChar) inStr = false; continue; }
+      if (ch === '`') { inTempl = inTempl ? 0 : 1; continue; }
+      if (inTempl) continue;
+      if (ch === '"' || ch === "'") { inStr = true; strChar = ch; continue; }
+      if (ch === '/' && src[i+1] === '/') { while (i < src.length && src[i] !== '\n') i++; continue; }
+      if (ch === '/' && src[i+1] === '*') { i+=2; while (i < src.length-1 && !(src[i]==='*'&&src[i+1]==='/')) i++; i++; continue; }
+      if (brackets[ch] !== undefined) brackets[ch]++;
+      if (closers[ch]) brackets[closers[ch]]--;
+    }
+    const bOpen = Object.entries(brackets).filter(([,v]) => v !== 0);
+    results.push(bOpen.length === 0 ? '<span class="ast-ok">✅ Brackets balanced</span>' : bOpen.map(([k,v]) => `<span class="ast-err">❌ Unbalanced '${k}': ${v>0?'+'+v+' unclosed':Math.abs(v)+' extra'}</span>`).join('<br>'));
+    const tagCounts = {};
+    const selfClose = new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+    const tagRe = /<\/?([a-zA-Z][a-zA-Z0-9]*)(?=[\s>])[^>]*>/g;
+    var tm;
+    while ((tm = tagRe.exec(src)) !== null) {
+      const tag = tm[1].toLowerCase();
+      if (selfClose.has(tag)) continue;
+      tagCounts[tag] = (tagCounts[tag]||0) + (tm[0].startsWith('</') ? -1 : 1);
+    }
+    const unbalTags = Object.entries(tagCounts).filter(([,v]) => v !== 0);
+    results.push(unbalTags.length === 0 ? '<span class="ast-ok">✅ HTML tags balanced</span>' : unbalTags.slice(0,5).map(([t,v]) => `<span class="ast-err">❌ &lt;${t}&gt;: ${v>0?v+' unclosed':Math.abs(v)+' extra'}</span>`).join('<br>'));
+    var cssOpen = 0;
+    [...src.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/gi)].forEach(m => { for (const ch of m[1]) { if (ch==='{') cssOpen++; else if (ch==='}') cssOpen--; } });
+    results.push(cssOpen === 0 ? '<span class="ast-ok">✅ CSS braces balanced</span>' : `<span class="ast-err">❌ CSS braces: ${cssOpen>0?cssOpen+' unclosed {':Math.abs(cssOpen)+' extra }'}</span>`);
+    results.push(`<span style="color:#ffffff">📏 ${src.split('\n').length} lines | ${(src.length/1024).toFixed(1)} KB</span>`);
+    $astContent.innerHTML = results.join('<br>');
+  }
+
+  function astGuardAfterApply() {
+    if (isCodeMode) return true;
+    if (!sourceContent) return true;
+    const src = sourceContent;
+    const counts = { '{': 0, '(': 0, '[': 0 };
+    const cl = { '}': '{', ')': '(', ']': '[' };
+    var ins = false, ic = '', it = 0;
+    for (var i = 0; i < src.length; i++) {
+      const c = src[i];
+      if (ins) { if (c === '\\') { i++; continue; } if (c === ic) ins = false; continue; }
+      if (c === '`') { it = it ? 0 : 1; continue; }
+      if (it) continue;
+      if (c === '"' || c === "'") { ins = true; ic = c; continue; }
+      if (c === '/' && src[i+1] === '/') { while (i < src.length && src[i] !== '\n') i++; continue; }
+      if (counts[c] !== undefined) counts[c]++;
+      if (cl[c]) counts[cl[c]]--;
+    }
+    const broken = Object.entries(counts).filter(([,v]) => v !== 0);
+    if (broken.length > 0) {
+      const msg = broken.map(([k,v]) => `'${k}' ${v>0?v+' unclosed':Math.abs(v)+' extra'}`).join(', ');
+      showErr(`AST Guard: ${msg} — auto-undoing`);
+      if (undoStack.length > 0) {
+        redoStack.push(sourceContent);
+        document.getElementById('redoBtn').disabled = false;
+        sourceContent = undoStack.pop();
+        if (undoStack.length === 0) document.getElementById('undoBtn').disabled = true;
+        render(sourceContent);
+        if (fileHandle) nativeSilentSave(sourceContent);
+        toast('🛡️ AST Guard: auto-undone!', 4000);
+      }
+      return false;
+    }
+    if ($astPanel.style.display === 'block') runASTCheck(sourceContent);
+    return true;
+  }
+
+  // ── Patch Parsing ─────────────────────────────────────────────────────
+  function parseAllBlocks(text) {
+    const normalized = text.replace(/\r\n/g, '\n');
+    const cleaned    = normalized.replace(/\/\/\s*(OLD|NEW)\s*CHUNK\s*/gi, '').trim();
+    const stripped   = cleaned.replace(/^```[\w]*\n?/gm, '').replace(/^```$/gm, '').trim();
+    const units      = stripped.split(/={3}\s*BLOCK[^=\n]*={3}/i).map(u => u.trim()).filter(Boolean);
+    if (units.length > 1) {
+      return units.map(u => {
+        const splitRe = /={3}\s*SPLIT\s*={3}/i;
+        const m = u.match(splitRe);
+        if (!m) return null;
+        const idx = u.indexOf(m[0]);
+        return { oldCode: u.slice(0, idx).trim(), newCode: u.slice(idx + m[0].length).trim() };
+      }).filter(Boolean);
+    }
+    const single = parseSmartBlock(stripped);
+    return single ? [single] : [];
+  }
+
+  function parseSmartBlock(text) {
+    const splitRe = /={3}\s*SPLIT\s*={3}/i;
+    const m = text.match(splitRe);
+    if (m) {
+      const idx     = text.indexOf(m[0]);
+      const oldPart = text.slice(0, idx).trim();
+      const newPart = text.slice(idx + m[0].length).trim();
+      if (oldPart.length > 0 && newPart.length > 0) return { oldCode: oldPart, newCode: newPart };
+    }
+    if (sourceContent) {
+      const parts = text.split(/\n\s*\n/);
+      if (parts.length === 2) {
+        const oldPart = parts[0].trim();
+        const newPart = parts[1].trim();
+        if (oldPart.length > 10 && newPart.length > 0 && sourceContent.includes(oldPart)) return { oldCode: oldPart, newCode: newPart };
+      }
+    }
+    return null;
+  }
+
+  // ── Flash / Toast ─────────────────────────────────────────────────────
+  function flash() { $fring.classList.add('on'); setTimeout(() => $fring.classList.remove('on'), 400); }
+  function toast(msg, duration) {
+    if (duration === undefined) duration = 2500;
+    $toast.textContent = msg; $toast.classList.add('show');
+    setTimeout(() => $toast.classList.remove('show'), duration);
+  }
+
+  // ── Undo / Redo ───────────────────────────────────────────────────────
+  function pushState() {
+    if (sourceContent) {
+      undoStack.push(sourceContent);
+      if (undoStack.length > 20) undoStack.shift();
+      redoStack = [];
+      document.getElementById('undoBtn').disabled = false;
+      document.getElementById('redoBtn').disabled = true;
+      updateStatusBar();
+    }
+  }
+  document.getElementById('undoBtn').addEventListener('click', async () => {
+    if (undoStack.length === 0) return;
+    redoStack.push(sourceContent); sourceContent = undoStack.pop();
+    if (undoStack.length === 0) document.getElementById('undoBtn').disabled = true;
+    document.getElementById('redoBtn').disabled = false;
+    render(sourceContent);
+    if (fileHandle) await nativeSilentSave(sourceContent);
+    toast("↩ Undo applied.");
+  });
+  document.getElementById('redoBtn').addEventListener('click', async () => {
+    if (redoStack.length === 0) return;
+    undoStack.push(sourceContent); sourceContent = redoStack.pop();
+    if (redoStack.length === 0) document.getElementById('redoBtn').disabled = true;
+    document.getElementById('undoBtn').disabled = false;
+    render(sourceContent);
+    if (fileHandle) await nativeSilentSave(sourceContent);
+    toast("↪ Redo applied.");
+  });
+
+  // ── Render ────────────────────────────────────────────────────────────
+  var renderTimer;
+  function render(src) {
+    clearTimeout(renderTimer);
+    renderTimer = setTimeout(() => {
+      localStorage.setItem('aicompiler_source', src);
+      if (isCodeMode) {
+        $codeView.value = src; flash(); updateStatusBar();
+      } else {
+        try {
+          const bridge = `<script>window.onerror=function(msg,src,line,col,err){window.parent.postMessage({__compilerErr:'Line '+line+': '+msg},'*');return true;};window.addEventListener('unhandledrejection',function(e){window.parent.postMessage({__compilerErr:'Unhandled promise: '+(e.reason||'unknown')},'*');});<\/script>`;
+          $pv.srcdoc = bridge + src;
+        } catch(e) {}
+        flash(); updateStatusBar();
+      }
+    }, 100);
+  }
+
+  // ── File Handling ─────────────────────────────────────────────────────
+  // Browser-only: File System Access API (Chrome/Edge) lets us write straight
+  // back to the picked file on every patch. Other browsers fall back to a
+  // plain <input type=file> read — those files live in memory only (use the
+  // GitHub Push button or a manual re-download to persist them).
+  async function nativeSilentSave(newContent) {
+    if (!fileHandle) return;
+    try { const w = await fileHandle.createWritable(); await w.write(newContent); await w.close(); }
+    catch (err) { /* permission revoked or unsupported — content still lives in memory/localStorage */ }
+  }
+  document.getElementById('fileBtn').addEventListener('click', async () => {
+    if (window.showOpenFilePicker) {
+      try {
+        [fileHandle] = await window.showOpenFilePicker();
+        const file = await fileHandle.getFile();
+        sourceContent = (await file.text()).replace(/\r\n/g, '\n');
+        document.getElementById('fileBtn').textContent = `📄 ${file.name}`;
+        document.getElementById('revertBtn').style.display = 'inline-block';
+        undoStack = []; redoStack = [];
+        document.getElementById('undoBtn').disabled = true;
+        document.getElementById('redoBtn').disabled = true;
+        render(sourceContent); toast(`🔗 Linked & Loaded: ${file.name}`);
+        return;
+      } catch (err) { return; /* user cancelled the picker */ }
+    }
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '*';
+    inp.onchange = async (ev) => {
+      const f = ev.target.files[0]; if (!f) return;
+      sourceContent = (await f.text()).replace(/\r\n/g, '\n');
+      fileHandle = null;
+      document.getElementById('fileBtn').textContent = `📄 ${f.name}`;
+      document.getElementById('revertBtn').style.display = 'none';
+      undoStack = []; redoStack = [];
+      document.getElementById('undoBtn').disabled = true;
+      document.getElementById('redoBtn').disabled = true;
+      render(sourceContent); toast(`🔗 Loaded: ${f.name} (in-memory only — push to GitHub to persist)`);
+    };
+    inp.click();
+  });
+  document.getElementById('revertBtn').addEventListener('click', async () => {
+    if (!fileHandle) { toast("❌ Revert requires an active file link"); return; }
+    try {
+      const file = await fileHandle.getFile();
+      sourceContent = (await file.text()).replace(/\r\n/g, '\n');
+      undoStack = []; redoStack = [];
+      document.getElementById('undoBtn').disabled = true;
+      document.getElementById('redoBtn').disabled = true;
+      render(sourceContent); toast("🔄 Reverted to disk version");
+    } catch(e) { toast("❌ Revert failed"); }
+  });
+
+  // ── Fingerprint Chunk Finder ──────────────────────────────────────────
+  function findFingerprintedChunk(source, chunk) {
+    const buildResult = (startIdx, matchedText, isFuzzy) => {
+      const lineStartIdx = source.lastIndexOf('\n', startIdx - 1) + 1;
+      const leadingSpace = source.substring(lineStartIdx, startIdx).match(/^[ \t]*/)[0];
+      const conf = Math.round((Math.min(chunk.length, matchedText.length) / Math.max(chunk.length, matchedText.length)) * 100);
+      return { originalText: matchedText, startIndex: startIdx, endIndex: startIdx + matchedText.length, baseIndent: leadingSpace, confidence: conf, isFuzzy: isFuzzy };
+    };
+    const literalIdx = source.indexOf(chunk);
+    if (literalIdx !== -1) {
+      const second = source.indexOf(chunk, literalIdx + 1);
+      if (second === -1) return buildResult(literalIdx, chunk, false);
+      const result = buildResult(literalIdx, chunk, false);
+      result.ambiguous = true;
+      return result;
+    }
+    try {
+      if (chunk.length > 4000) return null;
+      const escaped    = chunk.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+      const allMatches = [...source.matchAll(new RegExp(escaped, 'g'))];
+      if (allMatches.length === 0) return null;
+      if (allMatches.length === 1) return buildResult(allMatches[0].index, allMatches[0][0], true);
+      const result = buildResult(allMatches[0].index, allMatches[0][0], true);
+      result.ambiguous = true;
+      return result;
+    } catch(e) { return null; }
+  }
+
+  // ── Keyboard Shortcuts ────────────────────────────────────────────────
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.preventDefault(); document.getElementById('undoBtn').click(); }
+    else if (e.ctrlKey && e.key.toLowerCase() === 'y') { e.preventDefault(); document.getElementById('redoBtn').click(); }
+  });
+
+  // ── Apply Patch ───────────────────────────────────────────────────────
+  async function autoLockAndApply(parsed) {
+    if (!sourceContent) return false;
+    const loc = findFingerprintedChunk(sourceContent, parsed.oldCode);
+    if (!loc) { showErr(`Chunk not found in source.\n\nThe patch's OLD block didn't match anything:\n"${parsed.oldCode.slice(0,120).trim()}${parsed.oldCode.length>120?'…':''}"`); return false; }
+    if (loc.ambiguous) { showErr(`Ambiguous match — patch not applied.\n\nThis OLD block matches more than one location in the file.\nSend a larger, more unique chunk of surrounding code so the patch can target the exact spot.`); return false; }
+    if (loc.isFuzzy && loc.confidence < 70) { showErr(`Low confidence match (${loc.confidence}%) — patch not applied.\n\nThe OLD block matched fuzzily but not reliably enough.\nTry sending a larger context window around the change.`); return false; }
+    var newT = parsed.newCode.replace(/\r\n/g, '\n');
+    const currentLoc = findFingerprintedChunk(sourceContent, loc.originalText);
+    if (!currentLoc) return false;
+    if (currentLoc.ambiguous) { showErr(`Ambiguous match on re-check — patch not applied.\n\nThe matched text now appears more than once in the file.`); return false; }
+    pushState();
+    if (newT.length > 0) {
+      var lines = newT.split('\n');
+      var minIndent = Math.min(...lines.filter(l => l.trim()).map(l => l.match(/^[ \t]*/)[0].length));
+      var neededIndent = currentLoc.baseIndent;
+      if (neededIndent.length > minIndent) {
+        const padding = neededIndent.substring(minIndent);
+        lines = lines.map((l, i) => i === 0 ? l : padding + l);
+        newT = lines.join('\n');
+      }
+    }
+    sourceContent = sourceContent.slice(0, currentLoc.startIndex) + newT + sourceContent.slice(currentLoc.endIndex);
+    render(sourceContent);
+    if (fileHandle) await nativeSilentSave(sourceContent);
+    const ok = astGuardAfterApply();
+    if (ok) toast(`⚡ Auto-Applied!${loc.isFuzzy ? ` (${loc.confidence}% match)` : ''}`);
+    return ok;
+  }
+
+  // ── Shortcut Bar ──────────────────────────────────────────────────────
+  var scShortcuts = [];
+  var scLocked    = false;
+
+  function scLoad() {
+    try {
+      const saved = localStorage.getItem('aicompiler_shortcuts');
+      if (saved) scShortcuts = JSON.parse(saved);
+      scLocked = localStorage.getItem('aicompiler_sc_locked') === 'true';
+    } catch(e) { scShortcuts = []; }
+  }
+  function scSave() {
+    localStorage.setItem('aicompiler_shortcuts', JSON.stringify(scShortcuts));
+    localStorage.setItem('aicompiler_sc_locked', String(scLocked));
+    ghSaveConfig();
+  }
+  function scRender() {
+    const bar = document.getElementById('shortcutBar');
+    bar.innerHTML = '<span class="sc-label">⚡</span>';
+    bar.ondragover = (e) => { if (scLocked) return; e.preventDefault(); bar.style.boxShadow = 'inset 0 0 0 2px #ffffff'; };
+    bar.ondragleave = () => { bar.style.boxShadow = ''; };
+    bar.ondrop = (e) => {
+      if (scLocked) return;
+      e.preventDefault(); bar.style.boxShadow = '';
+      const type = e.dataTransfer.getData('sc-type');
+      const val  = e.dataTransfer.getData('text/plain');
+      if (!val) return;
+      if (type === 'repo') {
+        const label = val.split('/').pop();
+        const url   = `https://github.com/${val}`;
+        if (scShortcuts.find(s => s.label === label && s.url === url)) { toast('ℹ Already pinned: ' + label); return; }
+        scShortcuts.push({ label, url }); scSave(); scRender(); toast('📌 Pinned: ' + label);
+      } else if (type === 'sc-reorder') {
+        const fromIdx = +val;
+        const buttons = [...bar.querySelectorAll('.sc-btn')];
+        var toIdx = scShortcuts.length;
+        for (var i = 0; i < buttons.length; i++) { const r = buttons[i].getBoundingClientRect(); if (e.clientX < r.left + r.width / 2) { toIdx = i; break; } }
+        if (fromIdx !== toIdx && fromIdx !== toIdx - 1) {
+          const [item] = scShortcuts.splice(fromIdx, 1);
+          const insertAt = toIdx > fromIdx ? toIdx - 1 : toIdx;
+          scShortcuts.splice(insertAt, 0, item); scSave(); scRender();
+        }
+      }
+    };
+    scShortcuts.forEach((sc, idx) => {
+      const wrap = document.createElement('span');
+      wrap.style.cssText = 'display:inline-flex;align-items:center;gap:2px;flex-shrink:0;';
+      const btn = document.createElement('button');
+      btn.className = 'sc-btn'; btn.textContent = sc.label;
+      btn.title = sc.url + (!scLocked ? '\n(Drag to reorder · click ✕ to remove)' : '');
+      btn.draggable = !scLocked;
+      btn.addEventListener('dragstart', (e) => { if (scLocked) { e.preventDefault(); return; } e.dataTransfer.setData('text/plain', String(idx)); e.dataTransfer.setData('sc-type', 'sc-reorder'); btn.style.opacity = '0.4'; });
+      btn.addEventListener('dragend', () => { btn.style.opacity = ''; });
+      btn.addEventListener('click', async () => {
+        bar.querySelectorAll('.sc-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const ghMatch = sc.url.match(/^https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?\/?$/);
+        if (ghMatch) {
+          const repoName = `${ghMatch[1]}/${ghMatch[2]}`;
+          document.querySelectorAll('#repoBar .repo-btn').forEach(b => b.classList.remove('active'));
+          const matchingRepo = [...document.querySelectorAll('#repoBar .repo-btn')].find(b => b.title.startsWith(repoName));
+          if (matchingRepo) matchingRepo.classList.add('active');
+          ghRepos.forEach(x => x.isDefault = (x.name === repoName));
+          ghCurrentRepo = repoName;
+          document.getElementById('pushBtn').disabled = false;
+          ghSaveConfig();
+          await ghSyncFromRepo(repoName, false);
+        } else { window.open(sc.url, '_blank'); setTimeout(() => btn.classList.remove('active'), 800); }
+      });
+      wrap.appendChild(btn);
+      if (!scLocked) {
+        const del = document.createElement('button');
+        del.textContent = '✕'; del.title = 'Remove ' + sc.label;
+        del.style.cssText = 'background:#000432;border:1px solid #ffffff;color:#ffffff;padding:3px 5px;border-radius:5px;font:700 9px/1 "JetBrains Mono",monospace;cursor:pointer;flex-shrink:0;transition:all 0.15s;';
+        del.addEventListener('mouseenter', () => { del.style.background = '#ffffff'; del.style.color = '#000432'; });
+        del.addEventListener('mouseleave', () => { del.style.background = '#000432'; del.style.color = '#ffffff'; });
+        del.addEventListener('click', () => { scShortcuts.splice(idx,1); scSave(); scRender(); toast('🗑 Removed: ' + sc.label); });
+        wrap.appendChild(del);
+      }
+      bar.appendChild(wrap);
+    });
+    if (!scLocked) {
+      const addBtn = document.createElement('button');
+      addBtn.className = 'sc-add-btn'; addBtn.textContent = '＋'; addBtn.title = 'Add shortcut manually';
+      addBtn.addEventListener('click', () => {
+        const label = prompt('Shortcut label (e.g. "My App"):'); if (!label || !label.trim()) return;
+        const url = prompt('URL (e.g. https://myapp.com):'); if (!url || !url.trim()) return;
+        const fullUrl = url.startsWith('http') ? url.trim() : 'https://' + url.trim();
+        scShortcuts.push({ label: label.trim(), url: fullUrl }); scSave(); scRender(); toast('✅ Shortcut added: ' + label.trim());
+      });
+      bar.appendChild(addBtn);
+    }
+    const lockBtn = document.createElement('button');
+    lockBtn.className = 'sc-lock-btn' + (scLocked ? ' locked' : '');
+    lockBtn.textContent = scLocked ? '🔒' : '🔓';
+    lockBtn.title = scLocked ? 'Unlock to edit shortcuts' : 'Lock shortcuts';
+    lockBtn.addEventListener('click', () => { scLocked = !scLocked; scSave(); scRender(); toast(scLocked ? '🔒 Shortcuts locked' : '🔓 Shortcuts unlocked'); });
+    bar.appendChild(lockBtn);
+  }
+
+  // ── Clip History ──────────────────────────────────────────────────────
+  function addToHistory(text) {
+    if (!text || clipHistoryArray[0] === text) return;
+    clipHistoryArray.unshift(text);
+    if (clipHistoryArray.length > 10) clipHistoryArray.pop();
+    const sel = document.getElementById('clipHistory');
+    sel.innerHTML = '<option value="">📋 History</option>';
+    clipHistoryArray.forEach((c, i) => { sel.innerHTML += `<option value="${i}">${i+1}: ${c.replace(/\s+/g,' ').substring(0,30)}...</option>`; });
+  }
+  document.getElementById('clipHistory').addEventListener('change', (e) => {
+    const val = e.target.value;
+    if (val !== "") { lastClip = clipHistoryArray[val]; toast("📋 Loaded from history"); e.target.value = ""; }
+  });
+</script>
+
+<!-- ── PWA Configuration: Service Worker Registration ── -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('service-worker.js').catch((err) => {
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+</script>
+</body>
+</html>
